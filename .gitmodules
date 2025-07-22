@@ -1,0 +1,6 @@
+[submodule "react-frontend-auth"]
+	path = react-frontend-auth
+	url = https://github.com/bostang/react-frontend-auth.git
+[submodule "python-fast-api-auth"]
+	path = python-fast-api-auth
+	url = https://github.com/bostang/python-fast-api-auth.git
