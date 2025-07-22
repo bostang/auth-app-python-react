@@ -61,3 +61,13 @@ git submodule add https://github.com/bostang/python-fast-api-auth.git python-fas
 # untuk memperbarui submodul apabila ada perubahan
 git submodule update --init --recursive
 ```
+
+## Catatan CI/CD Pipeline
+
+Agar bisa melakukan CI/CD pipeline secara otomatis pada github workflow, pastikan _repository secrets_ telah didefiniskan tidak hanya di _child repo_ (`python-fast-api-auth`), tetapi juga _parent repo_ (`auth-app-python-react`).
+
+![repo-secrets](./img/repo-secrets.png)
+
+tampilan CI-CD sukses:
+
+![ci-cd-sukses](./img/ci-cd-sukses.png)
