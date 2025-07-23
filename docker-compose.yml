@@ -1,0 +1,40 @@
+# docker-compose.yml
+version: '3.8' # Ini bisa dihilangkan seperti saran WARN sebelumnya
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./python-fast-api-auth/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./python-fast-api-auth:/app # Untuk hot-reloading saat development
+    environment:
+      # Contoh environment variables jika diperlukan
+      - DATABASE_URL=sqlite:///./sql_app.db
+    restart: always
+
+  # Layanan frontend yang akan membangun dan menyajikan React dengan Nginx
+  frontend: # Ganti nama ini dari 'nginx' menjadi 'frontend' jika tadinya 'nginx'
+    build:
+      context: . # Konteks build dari root proyek
+      dockerfile: ./react-frontend-auth/Dockerfile # Menggunakan Dockerfile multi-stage
+    ports:
+      - "80:80" # Port 80 untuk akses web, bisa diubah ke 3000 atau port lain jika 80 bentrok
+    depends_on:
+      - backend # Pastikan backend jalan duluan
+    restart: always
+    # Pastikan tidak ada volume untuk /etc/nginx/conf.d/ di sini jika Dockerfile sudah COPY config
+
+  # Jika Anda memiliki layanan 'nginx' terpisah, dan itu bukan untuk melayani frontend,
+  # maka namanya harus dibedakan dengan jelas atau dihapus jika tidak diperlukan.
+  # Misalnya, jika 'nginx' di docker-compose.yml adalah reverse proxy utama untuk semua layanan,
+  # maka service 'frontend' mungkin tidak perlu menjalankan Nginx-nya sendiri.
+  # Namun, berdasarkan Dockerfile frontend Anda, sepertinya 'frontend' akan menjadi server Nginx.
+  # Jadi, jika ada service 'nginx' yang terpisah, kemungkinan itu duplikasi atau salah konfigurasi.
+
+  # Jika Anda *benar-benar* ingin Nginx terpisah sebagai reverse proxy utama
+  # yang mem-proxy ke React App yang di-serve oleh Nginx di kontainer frontend:
+  # Maka konfigurasi ini bisa jadi lebih kompleks, tapi umumnya, React App cukup di-serve
+  # oleh Nginx di dalam satu kontainer frontend itu sendiri.
