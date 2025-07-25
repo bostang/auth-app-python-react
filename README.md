@@ -71,3 +71,30 @@ Agar bisa melakukan CI/CD pipeline secara otomatis pada github workflow, pastika
 tampilan CI-CD sukses:
 
 ![ci-cd-sukses](./img/ci-cd-sukses.png)
+
+## Tutorial Singkat Push Docker image ke registry (Dockerhub)
+
+```bash
+# login ke docker
+docker login
+
+# lihat image yang sudah dibangun
+docker images
+
+# tag docker image
+docker tag auth-app-python-react-backend bostang/auth-app-backend:latest
+docker tag auth-app-python-react-frontend bostang/auth-app-frontend:latest
+
+# push ke registry
+docker push bostang/auth-app-backend:latest
+docker push bostang/auth-app-frontend:latest
+```
+
+
+Cara orang lain menggunakan docker image kita:
+
+```bash
+# pastikan sudah memiliki docker-compose.yml
+docker compose pull # Untuk mengunduh image terbaru
+docker compose up -d # Untuk menjalankan kontainer di background
+```
