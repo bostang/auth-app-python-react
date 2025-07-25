@@ -29,6 +29,37 @@ Sebuah parent repository untuk aplikasi sederhana (frontend + backend) untuk aut
   - lakukan `npm install`
   - lakukan `npm start`
 
+## Penggunaan Docker Compose
+
+**Langkah 1** : Migrasi DB
+
+> lakukan langkah ini SEKALI SAJA
+
+```bash
+# Bangun layanan terlebih dahulu (jika belum)
+docker-compose build
+
+# Jalankan kontainer db dan backend untuk sementara (tanpa frontend)
+docker-compose up -d db backend
+
+# Jalankan perintah migrasi di dalam kontainer backend
+# Pastikan nama layanan backend Anda adalah 'backend'
+docker-compose exec backend alembic upgrade head
+  # contoh output:
+    # INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+    # INFO  [alembic.runtime.migration] Will assume transactional DDL.
+    # INFO  [alembic.runtime.migration] Running upgrade  -> 7a7a3b1ab18f, Create users table
+
+# Hentikan dan hapus kontainer sementara
+docker-compose down
+```
+
+**Langkah 2** : jalankan semua layanan
+
+```bash
+docker-compose up --build
+```
+
 ## Demonstrasi
 
 - register :
