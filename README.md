@@ -284,6 +284,21 @@ Agar bisa melakukan CI/CD pipeline secara otomatis pada github workflow, pastika
 
 ![repo-secrets](./img/repo-secrets.png)
 
+mengingat variabel-variabel akan berbeda untuk _environment_ yang berbeda, misal saat `development` di local, kita punya URL :`http://localhost:8080`, tetapi saat deployment di kubernetes (`production`), kita punya : `http://backend-service:8080` ; maka agar github workflow berjalan sukses, kita bisa sesuaikan di `repository variables`.
+
+![repo-variable](image.png)
+
+lalu jangan lupa sertakan juga pada `ci-cd.yml`
+
+```yml
+env:
+  DB_PASSWORD: ${{ vars.DB_PASSWORD }} # Mengakses variabel repositori
+  DB_HOST: ${{ vars.DB_HOST }}
+  DB_PORT: ${{ vars.DB_PORT }}
+  DB_NAME: ${{ vars.DB_NAME }}
+  DB_USER: ${{ vars.DB_USER }}
+```
+
 tampilan CI-CD sukses:
 
 ![ci-cd-sukses](./img/ci-cd-sukses.png)
