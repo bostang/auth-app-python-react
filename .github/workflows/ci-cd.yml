@@ -96,22 +96,38 @@ jobs:
     - name: Install Backend dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest
-        pip install Flask Flask-SQLAlchemy
+        pip install flake8 pytest # Pastikan pytest terinstal
+        pip install Flask Flask-SQLAlchemy # Pastikan Flask dan Flask-SQLAlchemy terinstal
+        # Pastikan Alembic terinstal, jika tidak ada di requirements.txt
+        pip install alembic
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    # Hapus langkah ini karena penanganan database pengujian akan dilakukan oleh fixture Pytest
-    # - name: Create test database
-    #   run: |
-    #     psql -h localhost -U postgres -c 'DROP DATABASE IF EXISTS py_auth_db; CREATE DATABASE py_auth_db;'
-    #   env:
-    #     PGPASSWORD: password
+    - name: Run Alembic Migrations
+      run: |
+        # Pastikan environment variable untuk database diatur dengan benar untuk Alembic
+        # (DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD)
+        # Alembic akan menggunakan database ini untuk menerapkan migrasi.
+        # Pastikan Anda menggunakan database pengujian yang berbeda dari database produksi Anda.
+        alembic upgrade head
+      env:
+        # Variabel lingkungan untuk Alembic jika dibutuhkan, jika tidak maka akan diambil dari env job
+        DB_PASSWORD: ${{ vars.DB_PASSWORD }}
+        DB_HOST: localhost
+        DB_PORT: ${{ vars.DB_PORT }}
+        DB_NAME: py_auth_db # Alembic akan bermigrasi ke database ini
+        DB_USER: ${{ vars.DB_USER }}
+        # Jika Anda ingin Alembic bermigrasi ke py_auth_db_test, pastikan DB_NAME disetel ke itu.
+        # Atau, Anda bisa membuat database pengujian terpisah di sini dan mengarahkannya.
+        # Untuk kesederhanaan, kita asumsikan py_auth_db adalah database target untuk migrasi di CI.
+
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Test with pytest
       run: |
-        # Pastikan Pytest menggunakan database _test yang dikonfigurasi di test_auth.py
-        # Variabel lingkungan DB_NAME_TEST akan digunakan di test_auth.py
-        # Tidak perlu lagi membuat database di sini, karena fixture setup_test_db akan menanganinya.
+        # Pytest sekarang akan berjalan melawan skema yang telah dimigrasi oleh Alembic
         PYTHONPATH=. pytest -v tests/
 
   # Job untuk SonarQube Scan
