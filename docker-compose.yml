@@ -1,0 +1,42 @@
+# docker-compose.yml
+# INI ADALAH FILE DOKUMEN UNTUK DOCKER-COMPOSE UNTUK DEPLOYMENT APLIKASI PYTHON FASTAPI DAN REACT
+# DENGAN IMAGE YANG SUDAH DI-PUSH KE DOCKER HUB DAN PENAMBAHAN DATABASE POSTGRESQL
+
+services:
+  db: # Layanan baru untuk database PostgreSQL
+    image: postgres:16-alpine # Gunakan versi PostgreSQL yang stabil dan ringan
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Volume untuk menyimpan data persisten
+    environment:
+      POSTGRES_DB: py_auth_db #  nama database
+      POSTGRES_USER: postgres #  username database
+      POSTGRES_PASSWORD: password # password database
+    # ports:    # TIDAK DI-EKSPOS KE LOCALHOST
+    #   - "5432:5432" # Opsional: expose port database jika Anda perlu akses dari host
+    restart: always
+
+  backend:
+    image: bostang/auth-app-backend:latest # username Docker Hub dan nama repo Anda
+    ports:
+      - "8000:8000"
+    environment:
+      # Koneksi ke layanan 'db' di Docker network
+      DATABASE_URL: postgresql+psycopg2://postgres:password@db:5432/py_auth_db
+      # Pastikan variabel lingkungan lainnya juga ada dan disesuaikan
+      JWT_SECRET_KEY: "your_secret_key_here" # Ganti dengan kunci rahasia yang kuat
+      JWT_ALGORITHM: "HS256"
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 30
+    depends_on:
+      - db # Backend bergantung pada database agar db berjalan lebih dulu
+    restart: always
+
+  frontend:
+    image: bostang/auth-app-frontend:latest # username Docker Hub dan nama repo Anda
+    ports:
+      - "80:80"
+    depends_on:
+      - backend # Frontend bergantung pada backend
+    restart: always
+
+volumes:
+  postgres_data: # Definisi volume untuk data PostgreSQL

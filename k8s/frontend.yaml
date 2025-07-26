@@ -1,0 +1,48 @@
+# frontend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: auth-app
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: bostang/auth-app-frontend:latest # Ganti dengan image Docker Hub Anda
+          ports:
+            - containerPort: 80 # Default port untuk React App setelah di-build (Nginx/serve)
+          env:
+            # Sesuaikan dengan variabel lingkungan frontend Anda
+            # Biasanya ini adalah URL backend yang diakses frontend
+            # Jika frontend Anda mengakses REACT_APP_API_URL, dll.
+            # Contoh:
+            - name: REACT_APP_API_URL # Atau nama variabel lingkungan yang digunakan frontend Anda
+              value: "http://backend-service:8000/api" # URL internal ke backend service
+---
+# frontend-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: auth-app
+spec:
+  selector:
+    app: frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+   # ClusterIP membuat service ini hanya dapat diakses dari dalam cluster
+    # Jika Anda ingin mengaksesnya dari luar cluster, gunakan type: LoadBalancer atau NodePort
+    # Namun, untuk keamanan, kita gunakan ClusterIP saja.

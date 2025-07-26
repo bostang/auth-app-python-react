@@ -1,0 +1,38 @@
+# ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: auth-app-ingress
+  namespace: auth-app
+  annotations:
+    # Annotation untuk Ingress Nginx (optional, tapi sering berguna)
+    nginx.ingress.kubernetes.io/proxy-body-size: "0" # Mengizinkan ukuran request body tidak terbatas
+    nginx.ingress.kubernetes.io/ssl-redirect: "false" # Matikan redirect HTTPS jika tidak pakai SSL
+spec:
+  rules:
+    - http:
+        paths:
+          # Aturan untuk API backend
+          - path: /api
+            pathType: Prefix # Akan cocok dengan /api, /api/auth, /api/users, dll.
+            backend:
+              service:
+                name: backend-service # Nama Service Kubernetes untuk backend Anda
+                port:
+                  number: 8000       # Port yang diekspos oleh Service backend
+
+          # Aturan untuk frontend (catch-all untuk semua path lainnya)
+          - path: /
+            pathType: Prefix # Akan cocok dengan semua path
+            backend:
+              service:
+                name: frontend-service # Nama Service Kubernetes untuk frontend Anda
+                port:
+                  number: 80         # Port yang diekspos oleh Service frontend
+
+# CATATAN:
+# annotations: Ini adalah metadata tambahan untuk Ingress Controller.
+# nginx.ingress.kubernetes.io/ssl-redirect: "false": Sangat penting untuk Minikube karena kita tidak menginstal SSL/TLS. Jika ini tidak disetel, Nginx akan mencoba mengarahkan ke HTTPS dan akan gagal.
+# spec.rules: Mendefinisikan aturan routing.
+  # /api: Semua request yang dimulai dengan /api akan diteruskan ke backend-service pada port 8000.
+  # /: Semua request lainnya (yang tidak cocok dengan /api) akan diteruskan ke frontend-service pada port 80. Ini penting agar routing React (misalnya /login, /dashboard) ditangani oleh frontend.
