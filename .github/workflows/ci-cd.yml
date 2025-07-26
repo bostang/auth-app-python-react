@@ -53,6 +53,20 @@ jobs:
   # Job untuk CI/CD Backend FastAPI
   backend_ci_cd:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: py_auth_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: ./python-fast-api-auth # Semua perintah akan dijalankan di direktori ini
