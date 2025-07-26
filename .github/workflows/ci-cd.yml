@@ -57,7 +57,7 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_DB: py_auth_db
+          POSTGRES_DB: py_auth_db # Database default yang dibuat oleh image
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
         ports:
@@ -72,10 +72,14 @@ jobs:
         working-directory: ./python-fast-api-auth # Semua perintah akan dijalankan di direktori ini
     env: # <<< Tambahkan bagian env di sini untuk variabel level jobDB_USER="postgres"
       DB_PASSWORD: ${{ vars.DB_PASSWORD }} # Mengakses variabel repositori
-      DB_HOST: ${{ vars.DB_HOST }}
+      DB_HOST: localhost # Gunakan 'localhost' atau 'postgres' (nama service)
       DB_PORT: ${{ vars.DB_PORT }}
       DB_NAME: ${{ vars.DB_NAME }}
       DB_USER: ${{ vars.DB_USER }}
+      # Pastikan variabel lingkungan untuk JWT juga ada di sini jika dibutuhkan oleh pytest
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+      JWT_ALGORITHM: ${{ secrets.JWT_ALGORITHM }}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRE_MINUTES }}
     steps:
     - name: Checkout repository and submodules
       uses: actions/checkout@v4
@@ -92,31 +96,22 @@ jobs:
     - name: Install Backend dependencies
       run: |
         python -m pip install --upgrade pip
-        # Instal flake8 dan pytest terlebih dahulu
         pip install flake8 pytest
-        # Instal Flask dan SQLAlchemy jika diperlukan oleh aplikasi atau tes Anda
         pip install Flask Flask-SQLAlchemy
-        # Instal dependensi dari requirements.txt
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    - name: Lint with flake8
-      run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-    - name: Create test database
-      run: |
-        psql -h localhost -U postgres -c 'DROP DATABASE IF EXISTS py_auth_db; CREATE DATABASE py_auth_db;'
-      env:
-        PGPASSWORD: password
+    # Hapus langkah ini karena penanganan database pengujian akan dilakukan oleh fixture Pytest
+    # - name: Create test database
+    #   run: |
+    #     psql -h localhost -U postgres -c 'DROP DATABASE IF EXISTS py_auth_db; CREATE DATABASE py_auth_db;'
+    #   env:
+    #     PGPASSWORD: password
 
     - name: Test with pytest
-      env:
-          # Pastikan secrets didefinisikan di repositori induk (my-fullstack-app)
-          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-          JWT_ALGORITHM: ${{ secrets.JWT_ALGORITHM }}
-          JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRE_MINUTES }}
       run: |
+        # Pastikan Pytest menggunakan database _test yang dikonfigurasi di test_auth.py
+        # Variabel lingkungan DB_NAME_TEST akan digunakan di test_auth.py
+        # Tidak perlu lagi membuat database di sini, karena fixture setup_test_db akan menanganinya.
         PYTHONPATH=. pytest -v tests/
 
   # Job untuk SonarQube Scan
@@ -138,139 +133,4 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          # Ini adalah kunci untuk monorepo: menentukan direktori proyek yang akan di-scan
           projectBaseDir: python-fast-api-auth
-          # Anda mungkin juga perlu menambahkan properti lain di sini
-          # seperti sonar.sources, sonar.tests, dll., jika tidak ada file sonar-project.properties
-          # di dalam direktori python-fast-api-auth.
-          # Contoh: args: >
-          #   -Dsonar.sources=python-fast-api-auth/
-          #   -Dsonar.tests=python-fast-api-auth/tests/
-
-############# VERSI HANYA TERPICU SAAT UPDATE SUBMODUL ###########
-# name: Fullstack CI/CD (Monorepo with Submodules)
-
-# on:
-#   push:
-#     branches:
-#       - main
-#     paths:
-#       - 'react-frontend-auth/**' # Hanya picu jika ada perubahan di folder frontend
-#       - 'python-fast-api-auth/**' # Hanya picu jika ada perubahan di folder backend
-#   pull_request:
-#     types: [opened, synchronize, reopened]
-#     branches:
-#       - main
-#     paths:
-#       - 'react-frontend-auth/**'
-#       - 'python-fast-api-auth/**'
-
-# permissions:
-#   contents: read # Izin dasar untuk membaca konten repositori
-
-# jobs:
-#   # Job untuk CI/CD Frontend React
-#   frontend_ci_cd:
-#     runs-on: ubuntu-latest
-#     defaults:
-#       run:
-#         working-directory: ./react-frontend-auth # Semua perintah akan dijalankan di direktori ini
-
-#     steps:
-#     - name: Checkout repository and submodules
-#       uses: actions/checkout@v4
-#       with:
-#         submodules: true # PENTING: Untuk mengambil submodul
-
-#     - name: Set up Node.js for Frontend
-#       uses: actions/setup-node@v4
-#       with:
-#         node-version: '20' # Gunakan versi Node.js yang Anda gunakan
-#         cache: 'npm'
-#         cache-dependency-path: './react-frontend-auth/package-lock.json' # Cache spesifik untuk frontend
-
-#     - name: Install Frontend dependencies
-#       run: npm ci
-
-#     - name: Run Frontend ESLint
-#       run: npm run lint
-
-#     - name: Run Frontend tests
-#       run: npm test -- --watchAll=false
-
-#     - name: Build Frontend app
-#       run: npm run build
-#       env:
-#         CI: true # Mengatur CI=true untuk mencegah peringatan yang dianggap sebagai error
-
-#   # Job untuk CI/CD Backend FastAPI
-#   backend_ci_cd:
-#     runs-on: ubuntu-latest
-#     defaults:
-#       run:
-#         working-directory: ./python-fast-api-auth # Semua perintah akan dijalankan di direktori ini
-
-#     steps:
-#     - name: Checkout repository and submodules
-#       uses: actions/checkout@v4
-#       with:
-#         submodules: true # PENTING: Untuk mengambil submodul
-
-#     - name: Set up Python 3.12 for Backend
-#       uses: actions/setup-python@v5 # Menggunakan v5 untuk fitur cache yang lebih baik
-#       with:
-#         python-version: "3.12"
-#         cache: 'pip'
-#         cache-dependency-path: './python-fast-api-auth/requirements.txt' # Cache spesifik untuk backend
-
-#     - name: Install Backend dependencies
-#       run: |
-#         python -m pip install --upgrade pip
-#         # Instal flake8 dan pytest terlebih dahulu
-#         pip install flake8 pytest
-#         # Instal Flask dan SQLAlchemy jika diperlukan oleh aplikasi atau tes Anda
-#         pip install Flask Flask-SQLAlchemy
-#         # Instal dependensi dari requirements.txt
-#         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-#     - name: Lint with flake8
-#       run: |
-#         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-#         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-#     - name: Test with pytest
-#       env:
-#           # Pastikan secrets didefinisikan di repositori induk (my-fullstack-app)
-#           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-#           JWT_ALGORITHM: ${{ secrets.JWT_ALGORITHM }}
-#           JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRE_MINUTES }}
-#       run: |
-#         PYTHONPATH=. pytest -v tests/
-
-#   # Job untuk SonarQube Scan
-#   sonarqube:
-#     name: SonarQube Scan for Backend
-#     runs-on: ubuntu-latest
-#     needs: backend_ci_cd # Jalankan setelah backend_ci_cd berhasil
-#     if: github.ref == 'refs/heads/main' # Opsional: Hanya jalankan di branch main untuk menghindari scan berulang pada PR
-
-#     steps:
-#       - name: Checkout repository and submodules
-#         uses: actions/checkout@v4
-#         with:
-#           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
-#           submodules: true # Pastikan submodul diambil
-
-#       - name: SonarQube Scan
-#         uses: SonarSource/sonarqube-scan-action@v5
-#         env:
-#           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-#         with:
-#           # Ini adalah kunci untuk monorepo: menentukan direktori proyek yang akan di-scan
-#           projectBaseDir: python-fast-api-auth
-#           # Anda mungkin juga perlu menambahkan properti lain di sini
-#           # seperti sonar.sources, sonar.tests, dll., jika tidak ada file sonar-project.properties
-#           # di dalam direktori python-fast-api-auth.
-#           # Contoh: args: >
-#           #   -Dsonar.sources=python-fast-api-auth/
-#           #   -Dsonar.tests=python-fast-api-auth/tests/
