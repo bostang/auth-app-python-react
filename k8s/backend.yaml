@@ -1,0 +1,111 @@
+# backend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: auth-app
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      initContainers: # <-- Init Container untuk migrasi database
+        - name: run-migrations
+          image: bostang/auth-app-backend:latest # Gunakan image backend yang sama
+          command: ["/bin/sh", "-c", "alembic upgrade head"] # Perintah untuk menjalankan migrasi
+          env: # Pastikan Init Container memiliki akses ke kredensial DB
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_NAME
+            - name: DB_HOST
+              value: "postgres-service"
+            - name: DB_PORT
+              value: "5432"
+      containers:
+        - name: backend
+          image: bostang/auth-app-backend:latest
+          ports:
+            - containerPort: 8000
+          env:
+            # Mengambil JWT_SECRET_KEY dari Secret
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets # Nama Secret yang kita buat
+                  key: JWT_SECRET_KEY # Kunci di dalam Secret
+            
+            # Mengambil komponen DB User dari Secret
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_USER
+            
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_PASSWORD
+            
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_NAME
+            
+            # DB_HOST dan DB_PORT bisa disetel langsung karena mereka tidak rahasia
+            - name: DB_HOST
+              value: "postgres-service" # Nama Service Kubernetes untuk PostgreSQL
+            - name: DB_PORT
+              value: "5432"
+
+            # Variabel lingkungan lainnya (jika ada)
+            - name: JWT_ALGORITHM
+              value: "HS256"
+            - name: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+              value: "30"
+
+            - name: CORS_ORIGINS
+              value: "192.168.49.2" # <--- Ganti dengan IP Minikube Anda
+              # value: "http://$(minikube ip)" # <--- Gunakan `minikube ip` untuk mendapatkan IP Minikube
+                                             # Perhatikan bahwa $(minikube ip) tidak akan bekerja langsung di YAML
+                                             # Anda perlu menjalankan `minikube ip` dan menempelkan nilainya
+                                             # Atau jika Anda mau, bisa pakai environment variable di script apply.
+                                             # Misalnya: IP=$(minikube ip) dan value: "http://$IP"
+                                             # For simplicity, for now we hardcode the IP after getting it.
+
+---
+# backend-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: auth-app
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP # Service ini hanya dapat diakses di dalam cluster oleh frontend
+  # NodePort atau LoadBalancer bisa digunakan jika ingin diakses dari luar cluster, tapi untuk keamanan, kita gunakan ClusterIP saja.
