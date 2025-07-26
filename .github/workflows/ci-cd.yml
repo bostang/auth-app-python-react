@@ -57,7 +57,7 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_DB: py_auth_db
+          POSTGRES_DB: py_auth_db_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
         ports:
@@ -106,7 +106,7 @@ jobs:
 
     - name: Create test database
       run: |
-        psql -h localhost -U postgres -c 'CREATE DATABASE py_auth_db;'
+        psql -h localhost -U postgres -c 'CREATE DATABASE py_auth_db_test;'
       env:
         PGPASSWORD: password
 
